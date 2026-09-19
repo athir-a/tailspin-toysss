@@ -24,6 +24,22 @@ test.describe('Game Listing and Navigation', () => {
     });
   });
 
+  test('should paginate the games list using accessible controls', async ({ page }) => {
+    await test.step('Navigate to homepage and verify pagination controls are present', async () => {
+      await page.goto('/');
+      await expect(page.getByTestId('pagination-nav')).toBeVisible();
+      await expect(page.getByTestId('pagination-page-1')).toHaveAttribute('aria-current', 'page');
+      await expect(page.getByTestId('pagination-next')).toBeVisible();
+    });
+
+    await test.step('Move to the next page and confirm the URL updates', async () => {
+      await page.getByTestId('pagination-next').click();
+      await expect(page).toHaveURL(/\/page\/2$/);
+      await expect(page.getByTestId('pagination-page-2')).toHaveAttribute('aria-current', 'page');
+      await expect(page.getByTestId('games-grid')).toBeVisible();
+    });
+  });
+
   test('should navigate to correct game details page when clicking on a game', async ({ page }) => {
     let gameId: string | null;
     let gameTitle: string | null;
