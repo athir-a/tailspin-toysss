@@ -1,15 +1,22 @@
 ---
-import Layout from '../layouts/Layout.astro';
-import GameCard from '../components/GameCard.astro';
-import PageHero from '../components/PageHero.astro';
-import EmptyState from '../components/EmptyState.astro';
-import { getDatabase } from '../lib/db';
-import { DEFAULT_GAMES_PAGE_SIZE, getGamesPage } from '../lib/games';
+import type { GetStaticPaths } from 'astro';
+import Layout from '../../layouts/Layout.astro';
+import GameCard from '../../components/GameCard.astro';
+import PageHero from '../../components/PageHero.astro';
+import EmptyState from '../../components/EmptyState.astro';
+import { getDatabase } from '../../lib/db';
+import { DEFAULT_GAMES_PAGE_SIZE, getGamesPage } from '../../lib/games';
 
 export const prerender = true;
 
-const gamePage = 1;
-const result = await getGamesPage(getDatabase(), { page: gamePage, limit: DEFAULT_GAMES_PAGE_SIZE });
+export const getStaticPaths = (async () => {
+  const totalPages = (await getGamesPage(getDatabase(), { page: 1, limit: DEFAULT_GAMES_PAGE_SIZE })).totalPages;
+  return Array.from({ length: totalPages }, (_, index) => ({ params: { page: String(index + 1) } }));
+}) satisfies GetStaticPaths;
+
+const { page } = Astro.params;
+const currentPage = Number(page ?? '1');
+const result = await getGamesPage(getDatabase(), { page: currentPage, limit: DEFAULT_GAMES_PAGE_SIZE });
 const games = result.games;
 const totalPages = result.totalPages;
 const pageNumbers = Array.from({ length: totalPages }, (_, index) => index + 1);
@@ -39,7 +46,7 @@ const pageNumbers = Array.from({ length: totalPages }, (_, index) => index + 1);
             data-testid="pagination-nav"
           >
             <a
-              href={result.hasPreviousPage ? '/page/1' : '#'}
+              href={result.hasPreviousPage ? `/page/${result.page - 1}` : '#'}
               class:list={[
                 'inline-flex items-center justify-center rounded-lg border px-3 py-2 text-sm font-medium transition-colors duration-200',
                 result.hasPreviousPage
@@ -71,7 +78,7 @@ const pageNumbers = Array.from({ length: totalPages }, (_, index) => index + 1);
             ))}
 
             <a
-              href={result.hasNextPage ? '/page/2' : '#'}
+              href={result.hasNextPage ? `/page/${result.page + 1}` : '#'}
               class:list={[
                 'inline-flex items-center justify-center rounded-lg border px-3 py-2 text-sm font-medium transition-colors duration-200',
                 result.hasNextPage

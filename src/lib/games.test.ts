@@ -3,9 +3,11 @@ import { createTestDatabase } from '../../db/test-helpers';
 import { categories, publishers, games } from '../../db/schema';
 import type { Database } from './db';
 import {
+    DEFAULT_GAMES_PAGE_SIZE,
     getAllGames,
     getAllGameIds,
     getGameById,
+    getGamesPage,
 } from './games';
 
 async function seedGames(db: Database, count: number): Promise<void> {
@@ -43,6 +45,30 @@ describe('games data-access helpers', () => {
         expect(all.map((g) => g.title)).toEqual(['Game 01', 'Game 02', 'Game 03']);
         expect(all[0].category).toEqual({ id: expect.any(Number), name: 'Strategy' });
         expect(all[0].publisher).toEqual({ id: expect.any(Number), name: 'Pub One' });
+    });
+
+    it('returns a page of games with metadata', async () => {
+        await seedGames(db, 14);
+
+        const page = await getGamesPage(db, { page: 2, limit: 6 });
+
+        expect(page.page).toBe(2);
+        expect(page.limit).toBe(6);
+        expect(page.totalCount).toBe(14);
+        expect(page.totalPages).toBe(3);
+        expect(page.hasPreviousPage).toBe(true);
+        expect(page.hasNextPage).toBe(true);
+        expect(page.games.map((game) => game.title)).toEqual(['Game 07', 'Game 08', 'Game 09', 'Game 10', 'Game 11', 'Game 12']);
+    });
+
+    it('normalizes invalid pagination values', async () => {
+        await seedGames(db, 9);
+
+        const page = await getGamesPage(db, { page: 0, limit: 0 });
+
+        expect(page.page).toBe(1);
+        expect(page.limit).toBe(DEFAULT_GAMES_PAGE_SIZE);
+        expect(page.games.map((game) => game.title)).toEqual(['Game 01', 'Game 02', 'Game 03', 'Game 04', 'Game 05', 'Game 06']);
     });
 
     it('returns all game ids ordered by title', async () => {
